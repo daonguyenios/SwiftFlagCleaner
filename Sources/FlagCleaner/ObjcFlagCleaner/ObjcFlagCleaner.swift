@@ -2,7 +2,10 @@ import Foundation
 
 /// A class that cleans Objective-C flags from source files
 public class ObjcFlagCleaner {
-    
+
+    /// A FileManager for working on I/O
+    private let fileManager: any FileManagerProtocol
+
     /// Whether to print verbose output
     private let verbose: Bool
     
@@ -10,8 +13,14 @@ public class ObjcFlagCleaner {
     private(set) var unchangedFiles: [String] = []
     
     /// Initialize an Objective-C flag cleaner
-    /// - Parameter verbose: Whether to print verbose output
-    public init(verbose: Bool = false) {
+    /// - Parameters:
+    ///   - fileManager: FileManagerProtocol for working on I/O
+    ///   - verbose: Whether to print verbose output
+    public init(
+        fileManager: any FileManagerProtocol,
+        verbose: Bool = false
+    ) {
+        self.fileManager = fileManager
         self.verbose = verbose
     }
     
@@ -23,7 +32,7 @@ public class ObjcFlagCleaner {
     /// - Throws: Error if the file can't be processed
     @discardableResult
     public func processFile(at filePath: String, flag: String) throws -> Bool {
-        guard FileManager.default.fileExists(atPath: filePath) else {
+        guard fileManager.fileExists(atPath: filePath) else {
             throw NSError(domain: "ObjcFlagCleaner", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
         }
@@ -35,7 +44,7 @@ public class ObjcFlagCleaner {
         // Read the file content before processing to compare later
         let originalContent: String
         do {
-            originalContent = try String(contentsOf: URL(fileURLWithPath: filePath), encoding: .utf8)
+            originalContent = try fileManager.read(contentsOf: URL(fileURLWithPath: filePath), encoding: .utf8)
         } catch {
             throw error
         }
@@ -65,7 +74,7 @@ public class ObjcFlagCleaner {
         try executePerlCommand(ifdefPerlCommand, environment: environment, description: "#ifdef")
         
         // Read the file content after processing to check if it changed
-        let modifiedContent = try String(contentsOf: URL(fileURLWithPath: filePath), encoding: .utf8)
+        let modifiedContent = try fileManager.read(contentsOf: URL(fileURLWithPath: filePath), encoding: .utf8)
         let hasChanges = originalContent != modifiedContent
         
         if hasChanges {

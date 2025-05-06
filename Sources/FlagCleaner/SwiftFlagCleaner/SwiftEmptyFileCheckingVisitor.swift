@@ -9,7 +9,7 @@ import SwiftParser
  * It's used to determine if a file should be kept after flag cleaning operations or if
  * the file ended up empty and can be removed.
  */
-public final class EmptyFileCheckingVisitor: SyntaxVisitor {
+public final class SwiftEmptyFileCheckingVisitor: SyntaxVisitor {
     /// Indicates whether the file contains any meaningful code declarations.
     /// Starts as true and becomes false when a declaration is encountered.
     public var isEmptyFile: Bool = true

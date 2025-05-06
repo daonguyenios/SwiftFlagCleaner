@@ -4,16 +4,22 @@ import SwiftParser
 
 /// A class that cleans Swift feature flags from source files
 public class SwiftFlagCleaner {
-    
+
+    /// A FileManager for working on I/O
+    private let fileManager: any FileManagerProtocol
+
     /// Whether to print verbose output
     private let verbose: Bool
     
     /// Files that had no changes during processing
-    private(set) var unchangedFiles: [String] = []
+    var unchangedFiles: [String] = []
     
     /// Initialize a Swift flag cleaner
-    /// - Parameter verbose: Whether to print verbose output
-    public init(verbose: Bool = false) {
+    /// - Parameters:
+    ///   - fileManager: FileManagerProtocol for working on I/O
+    ///   - verbose: Whether to print verbose output
+    public init(fileManager: any FileManagerProtocol, verbose: Bool = false) {
+        self.fileManager = fileManager
         self.verbose = verbose
     }
     
@@ -25,7 +31,7 @@ public class SwiftFlagCleaner {
     /// - Throws: Error if the file can't be processed
     @discardableResult
     public func processFile(at filePath: String, flag: String) throws -> Bool {
-        guard FileManager.default.fileExists(atPath: filePath) else {
+        guard fileManager.fileExists(atPath: filePath) else {
             throw NSError(domain: "SwiftFlagCleaner", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
         }
@@ -35,30 +41,31 @@ public class SwiftFlagCleaner {
         }
         
         do {
-            let fileContent = try String(contentsOf: .init(filePath: filePath), encoding: .utf8)
+            let fileContent = try fileManager.read(contentsOf: .init(filePath: filePath), encoding: .utf8)
             let parser = Parser.parse(source: fileContent)
-            let cleaner = FlagCleanerRewriter(flag: flag)
+            let cleaner = SwiftFlagCleanerRewriter(flag: flag)
             let cleanedSource = cleaner.rewrite(parser.root)
 
             if cleaner.isEdited {
                 let cleanedParserSource = Parser.parse(source: cleanedSource.description)
-                let checkingVisitor = EmptyFileCheckingVisitor(viewMode: .all)
+                let checkingVisitor = SwiftEmptyFileCheckingVisitor(viewMode: .all)
                 checkingVisitor.walk(cleanedParserSource)
 
                 if checkingVisitor.isEmptyFile {
-                    try FileManager.default.removeItem(atPath: filePath)
-                    
+                    try fileManager.removeItem(atPath: filePath)
+
                     if verbose {
                         print("File is empty after cleaning, removed: \(filePath)")
                     }
                 }
                 else {
-                    try cleanedSource.description.write(
+                    try fileManager.write(
+                        cleanedSource.description,
                         to: .init(filePath: filePath),
                         atomically: true,
                         encoding: .utf8
                     )
-                    
+
                     if verbose {
                         print("✅ Successfully cleaned flag in file: \(filePath)")
                     }
