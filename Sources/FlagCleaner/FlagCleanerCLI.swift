@@ -69,8 +69,8 @@ struct FlagCleanerCLI: ParsableCommand {
         }
         
         // Process the matching files
-        let objcCleaner = ObjcFlagCleaner(verbose: verbose)
-        let swiftCleaner = SwiftFlagCleaner(verbose: verbose)
+        let objcCleaner = ObjcFlagCleaner(fileManager: FileManager.default, verbose: verbose)
+        let swiftCleaner = SwiftFlagCleaner(fileManager: FileManager.default, verbose: verbose)
         var processedCount = 0
         var successCount = 0
         

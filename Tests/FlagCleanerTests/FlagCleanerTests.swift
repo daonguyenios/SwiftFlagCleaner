@@ -1,97 +1,66 @@
 import XCTest
 import Foundation
-import SwiftParser
 @testable import FlagCleaner
 
 final class FlagCleanerTests: XCTestCase {
-    // Mock FileManager for testing file operations
-    class MockFileManager: FileManager {
+    // Mock FileManagerProtocol for testing file operations
+    class MockFileManager: FileManagerProtocol {
+        var currentDirectoryPath: String = "/mock/directory"
         var fileExistsOverride: ((String) -> Bool)?
-        var contentsMap: [String: String] = [:]
-        var removedFiles: [String] = []
-        var writtenFiles: [String: String] = [:]
+        var fileContents: [String: String] = [:]
+        var removedPaths: [String] = []
+        var writtenContents: [String: String] = [:]
+        var errorOnRead: Bool = false
+        var errorOnWrite: Bool = false
         
-        override func fileExists(atPath path: String) -> Bool {
-            return fileExistsOverride?(path) ?? super.fileExists(atPath: path)
+        func fileExists(atPath path: String) -> Bool {
+            return fileExistsOverride?(path) ?? fileContents.keys.contains(path)
         }
         
-        override func removeItem(atPath path: String) throws {
-            removedFiles.append(path)
+        func fileExists(atPath path: String, isDirectory: UnsafeMutablePointer<ObjCBool>?) -> Bool {
+            return fileExists(atPath: path)
         }
         
-        // Mock file read/write
-        func setupMockContent(_ path: String, content: String) {
-            contentsMap[path] = content
-        }
-        
-        // Track written files for verification
-        func getWrittenContent(_ path: String) -> String? {
-            return writtenFiles[path]
-        }
-    }
-    
-    // MockFileManager extension to simulate String.init(contentsOf:) and String.write(to:)
-    class MockStringExtensions {
-        private let fileManager: MockFileManager
-        
-        init(fileManager: MockFileManager) {
-            self.fileManager = fileManager
-        }
-        
-        func readContents(atPath path: String) throws -> String {
-            if let content = fileManager.contentsMap[path] {
-                return content
+        func removeItem(atPath path: String) throws {
+            if !fileExists(atPath: path) {
+                throw NSError(domain: "MockFileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not exist: \(path)"])
             }
-            throw NSError(domain: "MockFileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "File not found"])
+            removedPaths.append(path)
+            fileContents.removeValue(forKey: path)
         }
         
-        func writeContents(_ string: String, toPath path: String) throws {
-            fileManager.writtenFiles[path] = string
-        }
-    }
-    
-    // SwiftFlagCleaner subclass that uses our mocks
-    class TestableSwiftFlagCleaner: SwiftFlagCleaner {
-        let mockFileManager: MockFileManager
-        let mockStringExtensions: MockStringExtensions
-        
-        init(mockFileManager: MockFileManager, verbose: Bool = false) {
-            self.mockFileManager = mockFileManager
-            self.mockStringExtensions = MockStringExtensions(fileManager: mockFileManager)
-            super.init(verbose: verbose)
+        func write(_ content: any StringProtocol, to url: URL, atomically useAuxiliaryFile: Bool, encoding enc: String.Encoding) throws {
+            if errorOnWrite {
+                throw NSError(domain: "MockFileManager", code: 2, userInfo: [NSLocalizedDescriptionKey: "Simulated write error"])
+            }
+            let path = url.path
+            writtenContents[path] = content as? String
+            fileContents[path] = content as? String
         }
         
-        override func processFile(at filePath: String, flag: String) throws -> Bool {
-            guard mockFileManager.fileExists(atPath: filePath) else {
-                throw NSError(domain: "SwiftFlagCleaner", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
+        func read(contentsOf url: URL, encoding enc: String.Encoding) throws -> String {
+            if errorOnRead {
+                throw NSError(domain: "MockFileManager", code: 3, userInfo: [NSLocalizedDescriptionKey: "Simulated read error"])
             }
             
-            do {
-                let fileContent = try mockStringExtensions.readContents(atPath: filePath)
-                let parser = Parser.parse(source: fileContent)
-                let cleaner = SwiftFlagCleanerRewriter(flag: flag)
-                let cleanedSource = cleaner.rewrite(parser.root)
-
-                if cleaner.isEdited {
-                    let cleanedParserSource = Parser.parse(source: cleanedSource.description)
-                    let checkingVisitor = SwiftEmptyFileCheckingVisitor(viewMode: .all)
-                    checkingVisitor.walk(cleanedParserSource)
-
-                    if checkingVisitor.isEmptyFile {
-                        mockFileManager.removedFiles.append(filePath)
-                    } else {
-                        try mockStringExtensions.writeContents(cleanedSource.description, toPath: filePath)
-                    }
-                    
-                    return true
-                } else {
-                    unchangedFiles.append(filePath)
-                    return false
-                }
-            } catch {
-                throw error
+            let path = url.path
+            guard let content = fileContents[path] else {
+                throw NSError(domain: "MockFileManager", code: 4, userInfo: [NSLocalizedDescriptionKey: "File not found in mock: \(path)"])
             }
+            return content
+        }
+        
+        // Helper methods for test setup
+        func mockFileContent(at path: String, content: String) {
+            fileContents[path] = content
+        }
+        
+        func wasFileRemoved(at path: String) -> Bool {
+            return removedPaths.contains(path)
+        }
+        
+        func getWrittenContent(at path: String) -> String? {
+            return writtenContents[path]
         }
     }
     
@@ -99,8 +68,9 @@ final class FlagCleanerTests: XCTestCase {
     func testProcessFileWithSimpleFlag() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
+        let filePath = "/test/path/file.swift"
         
+        // Prepare test content with a simple feature flag
         let sourceCode = """
         import Foundation
         
@@ -119,24 +89,24 @@ final class FlagCleanerTests: XCTestCase {
         class MyClass {}
         """
         
-        let testPath = "/test/path/file.swift"
-        mockFileManager.setupMockContent(testPath, content: sourceCode)
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager, verbose: true)
-        let result = try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager, verbose: true)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertTrue(result)
-        XCTAssertEqual(mockFileManager.getWrittenContent(testPath), expectedCode)
+        XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
         XCTAssertTrue(cleaner.unchangedFiles.isEmpty)
     }
     
     func testProcessFileWithIfElseFlag() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
+        let filePath = "/test/path/file.swift"
         
+        // Prepare test content with if-else feature flag
         let sourceCode = """
         import Foundation
         
@@ -157,23 +127,23 @@ final class FlagCleanerTests: XCTestCase {
         class MyClass {}
         """
         
-        let testPath = "/test/path/file.swift"
-        mockFileManager.setupMockContent(testPath, content: sourceCode)
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        let result = try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertTrue(result)
-        XCTAssertEqual(mockFileManager.getWrittenContent(testPath), expectedCode)
+        XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
     }
     
     func testProcessFileWithNestedFlags() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
+        let filePath = "/test/path/file.swift"
         
+        // Prepare test content with nested flags
         let sourceCode = """
         import Foundation
         
@@ -204,23 +174,23 @@ final class FlagCleanerTests: XCTestCase {
         #endif
         """
         
-        let testPath = "/test/path/file.swift"
-        mockFileManager.setupMockContent(testPath, content: sourceCode)
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        let result = try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertTrue(result)
-        XCTAssertEqual(mockFileManager.getWrittenContent(testPath), expectedCode)
+        XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
     }
     
     func testProcessFileWithUnrelatedFlag() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
+        let filePath = "/test/path/file.swift"
         
+        // Prepare test content with an unrelated flag
         let sourceCode = """
         import Foundation
         
@@ -231,25 +201,25 @@ final class FlagCleanerTests: XCTestCase {
         class MyClass {}
         """
         
-        let testPath = "/test/path/file.swift"
-        mockFileManager.setupMockContent(testPath, content: sourceCode)
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        let result = try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertFalse(result)
-        XCTAssertNil(mockFileManager.getWrittenContent(testPath))
+        XCTAssertNil(mockFileManager.getWrittenContent(at: filePath))
         XCTAssertEqual(cleaner.unchangedFiles.count, 1)
-        XCTAssertEqual(cleaner.unchangedFiles.first, testPath)
+        XCTAssertEqual(cleaner.unchangedFiles.first, filePath)
     }
     
     func testProcessFileWithMultipleFlags() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
+        let filePath = "/test/path/file.swift"
         
+        // Prepare test content with multiple instances of the same flag
         let sourceCode = """
         import Foundation
         
@@ -278,52 +248,49 @@ final class FlagCleanerTests: XCTestCase {
         }
         """
         
-        let testPath = "/test/path/file.swift"
-        mockFileManager.setupMockContent(testPath, content: sourceCode)
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        let result = try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertTrue(result)
-        XCTAssertEqual(mockFileManager.getWrittenContent(testPath), expectedCode)
+        XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
     }
     
     func testProcessFileWithEmptyResult() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
+        let filePath = "/test/path/file.swift"
         
+        // Prepare test content that will be completely empty after processing
         let sourceCode = """
         #if FEATURE_FLAG
         // This file will be empty after processing
         #endif
         """
         
-        let testPath = "/test/path/file.swift"
-        mockFileManager.setupMockContent(testPath, content: sourceCode)
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        let result = try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertTrue(result)
-        XCTAssertTrue(mockFileManager.removedFiles.contains(testPath))
-        XCTAssertNil(mockFileManager.getWrittenContent(testPath))
+        XCTAssertTrue(mockFileManager.wasFileRemoved(at: filePath))
+        XCTAssertNil(mockFileManager.getWrittenContent(at: filePath))
     }
     
     func testFileNotFound() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in false }
-        
-        let testPath = "/test/path/nonexistent.swift"
+        let nonExistentPath = "/test/path/nonexistent.swift"
         
         // Execute and verify
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        XCTAssertThrowsError(try cleaner.processFile(at: testPath, flag: "FEATURE_FLAG")) { error in
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        XCTAssertThrowsError(try cleaner.processFile(at: nonExistentPath, flag: "FEATURE_FLAG")) { error in
             guard let nsError = error as NSError? else {
                 XCTFail("Expected NSError")
                 return
@@ -334,11 +301,49 @@ final class FlagCleanerTests: XCTestCase {
         }
     }
     
+    func testReadFileError() throws {
+        // Setup
+        let mockFileManager = MockFileManager()
+        let filePath = "/test/path/file.swift"
+        mockFileManager.mockFileContent(at: filePath, content: "// Test content")
+        mockFileManager.errorOnRead = true
+        
+        // Execute
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        XCTAssertThrowsError(try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG"))
+    }
+    
+    func testWriteFileError() throws {
+        // Setup
+        let mockFileManager = MockFileManager()
+        let filePath = "/test/path/file.swift"
+        
+        // Prepare test content with a flag that will trigger a write
+        let sourceCode = """
+        import Foundation
+        
+        #if FEATURE_FLAG
+        let enabledFeature = true
+        #endif
+        """
+        
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
+        mockFileManager.errorOnWrite = true
+        
+        // Execute
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        XCTAssertThrowsError(try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG"))
+    }
+    
     func testProcessFilesMultipleFiles() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { _ in true }
         
+        let filePath1 = "/test/path/file1.swift"
+        let filePath2 = "/test/path/file2.swift"
+        let filePath3 = "/test/path/file3.swift"
+        
+        // Prepare test content for multiple files
         let sourceCode1 = """
         #if FEATURE_FLAG
         let enabledFeature = true
@@ -357,35 +362,32 @@ final class FlagCleanerTests: XCTestCase {
         #endif
         """
         
-        let testPath1 = "/test/path/file1.swift"
-        let testPath2 = "/test/path/file2.swift"
-        let testPath3 = "/test/path/file3.swift"
-        
-        mockFileManager.setupMockContent(testPath1, content: sourceCode1)
-        mockFileManager.setupMockContent(testPath2, content: sourceCode2)
-        mockFileManager.setupMockContent(testPath3, content: sourceCode3)
+        mockFileManager.mockFileContent(at: filePath1, content: sourceCode1)
+        mockFileManager.mockFileContent(at: filePath2, content: sourceCode2)
+        mockFileManager.mockFileContent(at: filePath3, content: sourceCode3)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager)
-        let results = cleaner.processFiles(at: [testPath1, testPath2, testPath3], flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let results = cleaner.processFiles(at: [filePath1, filePath2, filePath3], flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertEqual(results.count, 3)
-        XCTAssertTrue(results[testPath1] ?? false)
-        XCTAssertFalse(results[testPath2] ?? true)
-        XCTAssertTrue(results[testPath3] ?? false)
+        XCTAssertTrue(results[filePath1] ?? false)
+        XCTAssertFalse(results[filePath2] ?? true)
+        XCTAssertTrue(results[filePath3] ?? false)
         XCTAssertEqual(cleaner.unchangedFiles.count, 1)
-        XCTAssertEqual(cleaner.unchangedFiles.first, testPath2)
+        XCTAssertEqual(cleaner.unchangedFiles[0], filePath2)
     }
     
     func testProcessFilesWithError() throws {
         // Setup
         let mockFileManager = MockFileManager()
-        mockFileManager.fileExistsOverride = { path in
-            // Make one file "not exist"
-            return path != "/test/path/file2.swift"
-        }
         
+        let filePath1 = "/test/path/file1.swift"
+        let filePath2 = "/test/path/file2.swift" // Will cause an error
+        let filePath3 = "/test/path/file3.swift"
+        
+        // Prepare test content
         let sourceCode1 = """
         #if FEATURE_FLAG
         let enabledFeature = true
@@ -398,21 +400,95 @@ final class FlagCleanerTests: XCTestCase {
         #endif
         """
         
-        let testPath1 = "/test/path/file1.swift"
-        let testPath2 = "/test/path/file2.swift"
-        let testPath3 = "/test/path/file3.swift"
-        
-        mockFileManager.setupMockContent(testPath1, content: sourceCode1)
-        mockFileManager.setupMockContent(testPath3, content: sourceCode3)
+        mockFileManager.mockFileContent(at: filePath1, content: sourceCode1)
+        mockFileManager.mockFileContent(at: filePath3, content: sourceCode3)
         
         // Execute
-        let cleaner = TestableSwiftFlagCleaner(mockFileManager: mockFileManager, verbose: true)
-        let results = cleaner.processFiles(at: [testPath1, testPath2, testPath3], flag: "FEATURE_FLAG")
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager, verbose: true)
+        let results = cleaner.processFiles(at: [filePath1, filePath2, filePath3], flag: "FEATURE_FLAG")
         
         // Verify
         XCTAssertEqual(results.count, 3)
-        XCTAssertTrue(results[testPath1] ?? false)
-        XCTAssertFalse(results[testPath2] ?? true)
-        XCTAssertTrue(results[testPath3] ?? false)
+        XCTAssertTrue(results[filePath1] ?? false)
+        XCTAssertFalse(results[filePath2] ?? true) // Should be false due to error
+        XCTAssertTrue(results[filePath3] ?? false)
+    }
+    
+    func testNegatedFlags() throws {
+        // Setup
+        let mockFileManager = MockFileManager()
+        let filePath = "/test/path/file.swift"
+        
+        // Prepare test content with a negated flag
+        let sourceCode = """
+        import Foundation
+        
+        #if !FEATURE_FLAG
+        let disabledFeature = true
+        #else
+        let enabledFeature = true
+        #endif
+        """
+        
+        let expectedCode = """
+        import Foundation
+        
+        let enabledFeature = true
+        """
+        
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
+        
+        // Execute
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
+        
+        // Verify
+        XCTAssertTrue(result)
+        XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
+    }
+    
+    func testComplexNestedFlags() throws {
+        // Setup
+        let mockFileManager = MockFileManager()
+        let filePath = "/test/path/file.swift"
+        
+        // Prepare test content with complex nested flags
+        let sourceCode = """
+        import Foundation
+        
+        #if DEBUG
+          #if FEATURE_FLAG
+            let debugFeatureEnabled = true
+          #else
+            let debugFeatureDisabled = true
+          #endif
+        #else
+          #if FEATURE_FLAG
+            let releaseFeatureEnabled = true
+          #else
+            let releaseFeatureDisabled = true
+          #endif
+        #endif
+        """
+        
+        let expectedCode = """
+        import Foundation
+        
+        #if DEBUG
+            let debugFeatureEnabled = true
+        #else
+            let releaseFeatureEnabled = true
+        #endif
+        """
+        
+        mockFileManager.mockFileContent(at: filePath, content: sourceCode)
+        
+        // Execute
+        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
+        
+        // Verify
+        XCTAssertTrue(result)
+        XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
     }
 }
