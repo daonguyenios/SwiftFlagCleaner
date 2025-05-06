@@ -1,0 +1,107 @@
+import Foundation
+import SwiftSyntax
+import SwiftParser
+
+/// A class that cleans Swift feature flags from source files
+public class SwiftFlagCleaner {
+    
+    /// Whether to print verbose output
+    private let verbose: Bool
+    
+    /// Files that had no changes during processing
+    private(set) var unchangedFiles: [String] = []
+    
+    /// Initialize a Swift flag cleaner
+    /// - Parameter verbose: Whether to print verbose output
+    public init(verbose: Bool = false) {
+        self.verbose = verbose
+    }
+    
+    /// Process a Swift file to clean a specific flag
+    /// - Parameters:
+    ///   - filePath: Path to the Swift file
+    ///   - flag: Flag name to clean
+    /// - Returns: Boolean indicating whether changes were made
+    /// - Throws: Error if the file can't be processed
+    @discardableResult
+    public func processFile(at filePath: String, flag: String) throws -> Bool {
+        guard FileManager.default.fileExists(atPath: filePath) else {
+            throw NSError(domain: "SwiftFlagCleaner", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
+        }
+        
+        if verbose {
+            print("🔄 Processing Swift file: \(filePath)")
+        }
+        
+        do {
+            let fileContent = try String(contentsOf: .init(filePath: filePath), encoding: .utf8)
+            let parser = Parser.parse(source: fileContent)
+            let cleaner = FlagCleanerRewriter(flag: flag)
+            let cleanedSource = cleaner.rewrite(parser.root)
+
+            if cleaner.isEdited {
+                let cleanedParserSource = Parser.parse(source: cleanedSource.description)
+                let checkingVisitor = EmptyFileCheckingVisitor(viewMode: .all)
+                checkingVisitor.walk(cleanedParserSource)
+
+                if checkingVisitor.isEmptyFile {
+                    try FileManager.default.removeItem(atPath: filePath)
+                    
+                    if verbose {
+                        print("File is empty after cleaning, removed: \(filePath)")
+                    }
+                }
+                else {
+                    try cleanedSource.description.write(
+                        to: .init(filePath: filePath),
+                        atomically: true,
+                        encoding: .utf8
+                    )
+                    
+                    if verbose {
+                        print("✅ Successfully cleaned flag in file: \(filePath)")
+                    }
+                }
+                
+                return true
+            } else {
+                if verbose {
+                    print("⚠️ No changes made to file: \(filePath)")
+                }
+                
+                // Add to the collection of unchanged files
+                unchangedFiles.append(filePath)
+                return false
+            }
+        } catch {
+            if verbose {
+                print("❌ Error processing file \(filePath): \(error.localizedDescription)")
+            }
+            throw error
+        }
+    }
+    
+    /// Process multiple Swift files to clean a specific flag
+    /// - Parameters:
+    ///   - filePaths: Array of file paths to process
+    ///   - flag: Flag name to clean
+    /// - Returns: Dictionary mapping file paths to success/failure
+    public func processFiles(at filePaths: [String], flag: String) -> [String: Bool] {
+        var results = [String: Bool]()
+        
+        for filePath in filePaths {
+            do {
+                let success = try processFile(at: filePath, flag: flag)
+                results[filePath] = success
+            } catch {
+                if verbose {
+                    print("Error processing \(filePath): \(error.localizedDescription)")
+                }
+                results[filePath] = false
+            }
+        }
+        
+        return results
+    }
+}
