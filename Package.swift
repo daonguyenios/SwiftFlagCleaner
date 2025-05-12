@@ -33,6 +33,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftParser", package: "swift-syntax"),
+                .product(name: "Rainbow", package: "Rainbow")
             ]
         ),
         .testTarget(name: "FlagCleanerTests", dependencies: ["SwiftFlagCleaner"])

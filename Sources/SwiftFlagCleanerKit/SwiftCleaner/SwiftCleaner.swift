@@ -42,7 +42,7 @@ public class SwiftCleaner {
         }
         
         if verbose {
-            print("🔄 Processing Swift file: \(filePath)")
+            print("🔄 Processing Swift file: \(filePath)".lightBlue)
         }
         
         do {
@@ -60,7 +60,7 @@ public class SwiftCleaner {
                     try fileManager.removeItem(atPath: filePath)
 
                     if verbose {
-                        print("File is empty after cleaning, removed: \(filePath)")
+                        print("File is empty after cleaning, removed: \(filePath)".lightGreen)
                     }
                 }
                 else {
@@ -72,14 +72,14 @@ public class SwiftCleaner {
                     )
 
                     if verbose {
-                        print("✅ Successfully cleaned flag in file: \(filePath)")
+                        print("✅ Successfully cleaned flag in file: \(filePath)".green)
                     }
                 }
                 
                 return true
             } else {
                 if verbose {
-                    print("⚠️ No changes made to file: \(filePath)")
+                    print("⚠️ No changes made to file: \(filePath)".yellow)
                 }
                 
                 // Add to the collection of unchanged files
@@ -88,7 +88,7 @@ public class SwiftCleaner {
             }
         } catch {
             if verbose {
-                print("❌ Error processing file \(filePath): \(error.localizedDescription)")
+                print("❌ Error processing file \(filePath): \(error.localizedDescription)".lightRed)
             }
             throw error
         }

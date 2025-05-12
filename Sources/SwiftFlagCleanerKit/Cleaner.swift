@@ -1,4 +1,5 @@
 import Foundation
+import Rainbow
 
 public struct Cleaner {
     let path: String
@@ -12,9 +13,9 @@ public struct Cleaner {
     }
 
     public func clean() throws {
-        print("Welcome to SwiftFlagCleaner!")
-        print("Scanning directory: \(path)")
-        print("Searching for files containing: \"\(flag)\"")
+        print("Welcome to SwiftFlagCleaner!".underline.bold.blue)
+        print("👀 Scanning directory: \(path)".italic.lightBlue)
+        print("👀 Searching for files containing: \"\(flag)\"".italic.lightBlue)
 
         let startTime = Date()
 
@@ -25,10 +26,7 @@ public struct Cleaner {
         let matchingFiles = try findFilesContainingString(directory: path, flag: flag, ripgrepPath: rgPath)
 
         if verbose {
-            print("Found \(matchingFiles.count) matching source files out of \(files.count) total:")
-            // matchingFiles.forEach { print(" - \($0)") }
-        } else {
-            print("Found \(matchingFiles.count) matching source files out of \(files.count) total.")
+            print("Found \(matchingFiles.count) matching source files out of \(files.count) total:".lightBlue)
         }
 
         // Process the matching files
@@ -37,7 +35,7 @@ public struct Cleaner {
         var processedCount = 0
         var successCount = 0
 
-        print("Processing matching files...")
+        print("Processing matching files...".blue.underline)
 
         for filePath in matchingFiles {
             processedCount += 1
@@ -48,7 +46,7 @@ public struct Cleaner {
                         successCount += 1
                     }
                 } catch {
-                    print("Error processing \(filePath): \(error.localizedDescription)")
+                    print("Error processing \(filePath): \(error.localizedDescription)".red)
                 }
             } else if filePath.hasSuffix(".swift") {
                 do {
@@ -56,7 +54,7 @@ public struct Cleaner {
                         successCount += 1
                     }
                 } catch {
-                    print("Error processing \(filePath): \(error.localizedDescription)")
+                    print("Error processing \(filePath): \(error.localizedDescription)".red)
                 }
             }
         }
@@ -65,13 +63,13 @@ public struct Cleaner {
         let unchangedFiles = objcCleaner.unchangedFiles + swiftCleaner.unchangedFiles
 
         let timeElapsed = Date().timeIntervalSince(startTime)
-        print("Successfully processed \(successCount) out of \(processedCount) files.")
-        print("Total processing time: \(String(format: "%.2f", timeElapsed)) seconds")
+        print("Successfully processed \(successCount) out of \(processedCount) files.".green.bold)
+        print("Total processing time: \(String(format: "%.2f", timeElapsed)) seconds".green)
 
         // Report files that had no changes
         if !unchangedFiles.isEmpty {
-            print("\nThe following \(unchangedFiles.count) files were matched but had no changes:")
-            print("These files may need manual review as they might contain the flag in a different format:")
+            print("\n⚠️ The following \(unchangedFiles.count) files were matched but had no changes:".yellow.bold)
+            print("These files may need manual review as they might contain the flag in a different format:".yellow)
 
             // Group files by extension for better organization
             let groupedByExtension = Dictionary(grouping: unchangedFiles) { path -> String in
@@ -86,13 +84,7 @@ public struct Cleaner {
             for (ext, files) in groupedByExtension.sorted(by: { $0.key < $1.key }) {
                 print("\n\(ext) files (\(files.count)):")
                 for (index, file) in files.sorted().enumerated() {
-                    // For large sets, print just the first 10 and summarize the rest
-                    if index < 10 || files.count <= 15 {
-                        print(" - \(file)")
-                    } else if index == 10 {
-                        print(" - ... and \(files.count - 10) more files")
-                        break
-                    }
+                    print(" - \(file)".lightRed)
                 }
             }
         }
@@ -113,7 +105,7 @@ public struct Cleaner {
         // Only try to install if ripgrep is not found
         if rgPath == nil {
             if verbose {
-                print("ripgrep not found in common locations. Checking if it's available in PATH...")
+                print("ripgrep not found in common locations. Checking if it's available in PATH...".italic.lightRed)
             }
 
             // Check if ripgrep is in PATH
@@ -133,11 +125,11 @@ public struct Cleaner {
 
             // If rg is not in PATH and we haven't installed it before, offer to install
             if whichTask.terminationStatus != 0 || foundPath?.isEmpty == true {
-                print("ripgrep not found. Would you like to install ripgrep for better search performance? (y/n)")
+                print("ripgrep not found. Would you like to install ripgrep for better search performance? (y/n)".bold.lightRed)
                 let response = readLine()?.lowercased()
 
                 if response == "y" || response == "yes" {
-                    print("Attempting to install ripgrep using Homebrew...")
+                    print("Attempting to install ripgrep using Homebrew...".italic.lightBlue)
 
                     let brewInstallTask = Process()
                     brewInstallTask.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -150,7 +142,7 @@ public struct Cleaner {
                     for path in rgPaths {
                         if FileManager.default.fileExists(atPath: path) {
                             if verbose {
-                                print("ripgrep successfully installed at \(path)")
+                                print("ripgrep successfully installed at \(path)".lightBlue)
                             }
                             return path
                         }
@@ -162,7 +154,7 @@ public struct Cleaner {
             } else if let path = foundPath, !path.isEmpty {
                 // Use the found path
                 if verbose {
-                    print("Found ripgrep in PATH at: \(path)")
+                    print("Found ripgrep in PATH at: \(path)".lightBlue)
                 }
                 return path
             }
@@ -198,7 +190,7 @@ public struct Cleaner {
 
         if usingRipgrep, let rgPath = ripgrepPath {
             if verbose {
-                print("Finding source files using ripgrep...")
+                print("Finding source files using ripgrep...".italic.lightBlue)
             }
 
             // Use ripgrep to find Swift and Objective-C files
@@ -225,7 +217,7 @@ public struct Cleaner {
             rgTask.waitUntilExit()
         } else {
             if verbose {
-                print("Finding source files using find command...")
+                print("Finding source files using find command...".italic.lightBlue)
             }
 
             // Fallback to find command
@@ -263,7 +255,7 @@ public struct Cleaner {
         // If ripgrep path is available, use it
         if let rgPath = ripgrepPath {
             if verbose {
-                print("Using ripgrep to search for \"\(flag)\" in files...")
+                print("Using ripgrep to search for \"\(flag)\" in files...".italic.lightBlue)
             }
 
             let rgTask = Process()
@@ -282,15 +274,15 @@ public struct Cleaner {
 
             let searchStartTime = Date()
             if verbose {
-                print("Running ripgrep command: \(rgPath) \(rgTask.arguments?.joined(separator: " ") ?? "")")
-                print("Searching for pattern: \"\(flag)\" in directory: \(directory)")
+                print("Running ripgrep command: \(rgPath) \(rgTask.arguments?.joined(separator: " ") ?? "")".italic)
+                print("Searching for pattern: \"\(flag)\" in directory: \(directory)".italic)
             }
 
             defer {
                 // Print the time taken for the search
                 if verbose {
                     let searchTime = Date().timeIntervalSince(searchStartTime)
-                    print("Ripgrep search completed in \(String(format: "%.2f", searchTime)) seconds")
+                    print("Ripgrep search completed in \(String(format: "%.2f", searchTime)) seconds".blue.bold)
                 }
             }
 
@@ -330,7 +322,7 @@ public struct Cleaner {
                     .joined(separator: "\n")
 
                 if !relevantErrors.isEmpty && verbose {
-                    print("Ripgrep reported the following messages:")
+                    print("Ripgrep reported the following messages:".lightRed)
                     print(relevantErrors)
                 }
             }
@@ -338,7 +330,7 @@ public struct Cleaner {
             rgTask.waitUntilExit()
 
             if verbose {
-                print("Ripgrep process exited with status: \(rgTask.terminationStatus)")
+                print("Ripgrep process exited with status: \(rgTask.terminationStatus)".lightRed)
             }
 
             // No need for temporary file cleanup
@@ -346,8 +338,8 @@ public struct Cleaner {
         } else {
             // Use grep as fallback
             if verbose {
-                print("Using grep to search for \"\(flag)\" in files...")
-                print("Note: For better performance, consider installing ripgrep")
+                print("Using grep to search for \"\(flag)\" in files...".lightBlue)
+                print("Note: For better performance, consider installing ripgrep".lightBlue)
             }
             return try fallbackToGrep(directory: directory, flag: flag)
         }

@@ -1,4 +1,5 @@
 import Foundation
+import Rainbow
 
 /// A class that cleans Objective-C flags from source files
 public class ObjcCleaner {
@@ -43,7 +44,7 @@ public class ObjcCleaner {
         }
         
         if verbose {
-            print("🔄 Processing Objective-C file: \(filePath)")
+            print("🔄 Processing Objective-C file: \(filePath)".lightBlue)
         }
         
         // Read the file content before processing to compare later
@@ -84,12 +85,12 @@ public class ObjcCleaner {
         
         if hasChanges {
             if verbose {
-                print("✅ Successfully processed file: \(filePath)")
+                print("✅ Successfully processed file: \(filePath)".green)
             }
             return true
         } else {
             if verbose {
-                print("⚠️ No changes made to file: \(filePath)")
+                print("⚠️ No changes made to file: \(filePath)".yellow)
             }
             
             // Add to the collection of unchanged files
@@ -106,7 +107,7 @@ public class ObjcCleaner {
     /// - Throws: Error if the command fails
     private func executePerlCommand(_ command: String, environment: [String: String], description: String) throws {
         if verbose {
-            print("Executing \(description) Perl command: \(command)")
+            print("Executing \(description) Perl command: \(command)".lightBlue)
         }
         
         let task = Process()
@@ -131,7 +132,7 @@ public class ObjcCleaner {
                 let errorMessage = String(data: errorData, encoding: .utf8) ?? "Unknown error"
                 
                 if verbose {
-                    print("❌ Error processing \(description) directive: \(errorMessage)")
+                    print("❌ Error processing \(description) directive: \(errorMessage)".lightRed)
                 }
                 
                 throw NSError(
@@ -144,7 +145,7 @@ public class ObjcCleaner {
             }
         } catch {
             if verbose {
-                print("Failed to execute \(description) command: \(error.localizedDescription)")
+                print("Failed to execute \(description) command: \(error.localizedDescription)".lightRed)
             }
             throw error
         }
@@ -165,7 +166,7 @@ public class ObjcCleaner {
                 results[filePath] = success
             } catch {
                 if verbose {
-                    print("❌ Error processing \(filePath): \(error.localizedDescription)")
+                    print("❌ Error processing \(filePath): \(error.localizedDescription)".lightRed)
                 }
                 results[filePath] = false
             }
