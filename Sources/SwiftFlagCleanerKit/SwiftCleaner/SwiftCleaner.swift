@@ -12,7 +12,7 @@ public class SwiftCleaner {
     private let verbose: Bool
     
     /// Files that had no changes during processing
-    var unchangedFiles: [String] = []
+    public var unchangedFiles: [String] = []
     
     /// Initialize a Swift flag cleaner
     /// - Parameters:
@@ -32,8 +32,13 @@ public class SwiftCleaner {
     @discardableResult
     public func processFile(at filePath: String, flag: String) throws -> Bool {
         guard fileManager.fileExists(atPath: filePath) else {
-            throw NSError(domain: "SwiftCleaner", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
+            throw NSError(
+                domain: "SwiftCleaner",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "File not found: \(filePath)"
+                ]
+            )
         }
         
         if verbose {

@@ -1,8 +1,8 @@
 import XCTest
 import Foundation
-@testable import SwiftFlagCleaner
+@testable import SwiftFlagCleanerKit
 
-final class FlagCleanerTests: XCTestCase {
+final class SwiftCleanerTests: XCTestCase {
     // Mock FileManagerProtocol for testing file operations
     class MockFileManager: FileManagerProtocol {
         var currentDirectoryPath: String = "/mock/directory"
@@ -23,7 +23,11 @@ final class FlagCleanerTests: XCTestCase {
         
         func removeItem(atPath path: String) throws {
             if !fileExists(atPath: path) {
-                throw NSError(domain: "MockFileManager", code: 1, userInfo: [NSLocalizedDescriptionKey: "File does not exist: \(path)"])
+                throw NSError(
+                    domain: "MockFileManager",
+                    code: 1,
+                    userInfo: [NSLocalizedDescriptionKey: "File does not exist: \(path)"]
+                )
             }
             removedPaths.append(path)
             fileContents.removeValue(forKey: path)
@@ -31,7 +35,11 @@ final class FlagCleanerTests: XCTestCase {
         
         func write(_ content: any StringProtocol, to url: URL, atomically useAuxiliaryFile: Bool, encoding enc: String.Encoding) throws {
             if errorOnWrite {
-                throw NSError(domain: "MockFileManager", code: 2, userInfo: [NSLocalizedDescriptionKey: "Simulated write error"])
+                throw NSError(
+                    domain: "MockFileManager",
+                    code: 2,
+                    userInfo: [NSLocalizedDescriptionKey: "Simulated write error"]
+                )
             }
             let path = url.path
             writtenContents[path] = content as? String
@@ -40,12 +48,20 @@ final class FlagCleanerTests: XCTestCase {
         
         func read(contentsOf url: URL, encoding enc: String.Encoding) throws -> String {
             if errorOnRead {
-                throw NSError(domain: "MockFileManager", code: 3, userInfo: [NSLocalizedDescriptionKey: "Simulated read error"])
+                throw NSError(
+                    domain: "MockFileManager",
+                    code: 3,
+                    userInfo: [NSLocalizedDescriptionKey: "Simulated read error"]
+                )
             }
             
             let path = url.path
             guard let content = fileContents[path] else {
-                throw NSError(domain: "MockFileManager", code: 4, userInfo: [NSLocalizedDescriptionKey: "File not found in mock: \(path)"])
+                throw NSError(
+                    domain: "MockFileManager",
+                    code: 4,
+                    userInfo: [NSLocalizedDescriptionKey: "File not found in mock: \(path)"]
+                )
             }
             return content
         }
@@ -149,15 +165,15 @@ final class FlagCleanerTests: XCTestCase {
         
         #if GLOBAL_FLAG
         class OuterClass {
-            #if FEATURE_FLAG
+        #if FEATURE_FLAG
             func enabledFeature() {
                 print("This is enabled")
             }
-            #else
+        #else
             func disabledFeature() {
                 print("This is disabled")
             }
-            #endif
+        #endif
         }
         #endif
         """
@@ -295,7 +311,7 @@ final class FlagCleanerTests: XCTestCase {
                 XCTFail("Expected NSError")
                 return
             }
-            XCTAssertEqual(nsError.domain, "SwiftFlagCleaner")
+            XCTAssertEqual(nsError.domain, "SwiftCleaner")
             XCTAssertEqual(nsError.code, 1)
             XCTAssertTrue(nsError.localizedDescription.contains("File not found"))
         }
@@ -457,17 +473,17 @@ final class FlagCleanerTests: XCTestCase {
         import Foundation
         
         #if DEBUG
-          #if FEATURE_FLAG
+        #if FEATURE_FLAG
             let debugFeatureEnabled = true
-          #else
-            let debugFeatureDisabled = true
-          #endif
         #else
-          #if FEATURE_FLAG
+            let debugFeatureDisabled = true
+        #endif
+        #else
+        #if FEATURE_FLAG
             let releaseFeatureEnabled = true
-          #else
+        #else
             let releaseFeatureDisabled = true
-          #endif
+        #endif
         #endif
         """
         
@@ -492,3 +508,20 @@ final class FlagCleanerTests: XCTestCase {
         XCTAssertEqual(mockFileManager.getWrittenContent(at: filePath), expectedCode)
     }
 }
+
+
+import Foundation
+
+#if DEBUG
+  #if FEATURE_FLAG
+    let debugFeatureEnabled = true
+  #else
+    let debugFeatureDisabled = true
+  #endif
+#else
+  #if FEATURE_FLAG
+    let releaseFeatureEnabled = true
+  #else
+    let releaseFeatureDisabled = true
+  #endif
+#endif

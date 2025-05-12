@@ -1,6 +1,6 @@
 import Testing
 import SwiftParser
-@testable import SwiftFlagCleaner
+@testable import SwiftFlagCleanerKit
 
 private func cleanSource(_ source: String) -> String {
     let syntaxTree = Parser.parse(source: source)

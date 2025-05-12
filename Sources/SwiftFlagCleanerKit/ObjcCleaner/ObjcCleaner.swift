@@ -10,7 +10,7 @@ public class ObjcCleaner {
     private let verbose: Bool
     
     /// Files that had no changes during processing
-    private(set) var unchangedFiles: [String] = []
+    public private(set) var unchangedFiles: [String] = []
     
     /// Initialize an Objective-C flag cleaner
     /// - Parameters:
@@ -33,8 +33,13 @@ public class ObjcCleaner {
     @discardableResult
     public func processFile(at filePath: String, flag: String) throws -> Bool {
         guard fileManager.fileExists(atPath: filePath) else {
-            throw NSError(domain: "ObjcCleaner", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
+            throw NSError(
+                domain: "ObjcCleaner",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "File not found: \(filePath)"
+                ]
+            )
         }
         
         if verbose {
@@ -129,8 +134,13 @@ public class ObjcCleaner {
                     print("❌ Error processing \(description) directive: \(errorMessage)")
                 }
                 
-                throw NSError(domain: "ObjcCleaner", code: Int(status),
-                              userInfo: [NSLocalizedDescriptionKey: "Failed to process \(description) directive: \(errorMessage)"])
+                throw NSError(
+                    domain: "ObjcCleaner",
+                    code: Int(status),
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Failed to process \(description) directive: \(errorMessage)"
+                    ]
+                )
             }
         } catch {
             if verbose {
