@@ -3,7 +3,7 @@ import SwiftParser
 
 public typealias FlagString = String
 
-final public class SwiftFlagCleanerRewriter: SyntaxRewriter {
+final public class SwiftCleanerRewriter: SyntaxRewriter {
     public private(set) var isEdited: Bool = false
     public let flag: FlagString
 

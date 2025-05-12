@@ -1,6 +1,6 @@
 import XCTest
 import Foundation
-@testable import FlagCleaner
+@testable import SwiftFlagCleaner
 
 final class FlagCleanerTests: XCTestCase {
     // Mock FileManagerProtocol for testing file operations
@@ -92,7 +92,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager, verbose: true)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager, verbose: true)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -130,7 +130,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -177,7 +177,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -204,7 +204,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -251,7 +251,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -274,7 +274,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -289,7 +289,7 @@ final class FlagCleanerTests: XCTestCase {
         let nonExistentPath = "/test/path/nonexistent.swift"
         
         // Execute and verify
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         XCTAssertThrowsError(try cleaner.processFile(at: nonExistentPath, flag: "FEATURE_FLAG")) { error in
             guard let nsError = error as NSError? else {
                 XCTFail("Expected NSError")
@@ -309,7 +309,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.errorOnRead = true
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         XCTAssertThrowsError(try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG"))
     }
     
@@ -331,7 +331,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.errorOnWrite = true
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         XCTAssertThrowsError(try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG"))
     }
     
@@ -367,7 +367,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath3, content: sourceCode3)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let results = cleaner.processFiles(at: [filePath1, filePath2, filePath3], flag: "FEATURE_FLAG")
         
         // Verify
@@ -404,7 +404,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath3, content: sourceCode3)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager, verbose: true)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager, verbose: true)
         let results = cleaner.processFiles(at: [filePath1, filePath2, filePath3], flag: "FEATURE_FLAG")
         
         // Verify
@@ -439,7 +439,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify
@@ -484,7 +484,7 @@ final class FlagCleanerTests: XCTestCase {
         mockFileManager.mockFileContent(at: filePath, content: sourceCode)
         
         // Execute
-        let cleaner = SwiftFlagCleaner(fileManager: mockFileManager)
+        let cleaner = SwiftCleaner(fileManager: mockFileManager)
         let result = try cleaner.processFile(at: filePath, flag: "FEATURE_FLAG")
         
         // Verify

@@ -3,7 +3,7 @@ import SwiftSyntax
 import SwiftParser
 
 /// A class that cleans Swift feature flags from source files
-public class SwiftFlagCleaner {
+public class SwiftCleaner {
 
     /// A FileManager for working on I/O
     private let fileManager: any FileManagerProtocol
@@ -32,7 +32,7 @@ public class SwiftFlagCleaner {
     @discardableResult
     public func processFile(at filePath: String, flag: String) throws -> Bool {
         guard fileManager.fileExists(atPath: filePath) else {
-            throw NSError(domain: "SwiftFlagCleaner", code: 1,
+            throw NSError(domain: "SwiftCleaner", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
         }
         
@@ -43,7 +43,7 @@ public class SwiftFlagCleaner {
         do {
             let fileContent = try fileManager.read(contentsOf: .init(filePath: filePath), encoding: .utf8)
             let parser = Parser.parse(source: fileContent)
-            let cleaner = SwiftFlagCleanerRewriter(flag: flag)
+            let cleaner = SwiftCleanerRewriter(flag: flag)
             let cleanedSource = cleaner.rewrite(parser.root)
 
             if cleaner.isEdited {

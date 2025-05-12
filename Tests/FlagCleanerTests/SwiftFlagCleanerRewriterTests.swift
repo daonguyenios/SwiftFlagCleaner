@@ -1,16 +1,16 @@
 import Testing
 import SwiftParser
-@testable import FlagCleaner
+@testable import SwiftFlagCleaner
 
 private func cleanSource(_ source: String) -> String {
     let syntaxTree = Parser.parse(source: source)
-    let cleanedSource = SwiftFlagCleanerRewriter(flag: "FEATURE_FLAG")
+    let cleanedSource = SwiftCleanerRewriter(flag: "FEATURE_FLAG")
         .rewrite(syntaxTree.root)
 
     return cleanedSource.description
 }
 
-struct SwiftFlagCleanerRewriterTests {
+struct SwiftCleanerRewriterTests {
   @Test func ifEnabledFlag() async throws {
     let source =
       """

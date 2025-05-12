@@ -1,6 +1,6 @@
 import Testing
 import SwiftParser
-@testable import FlagCleaner
+@testable import SwiftFlagCleaner
 
 struct SwiftEmptyFileCheckingVisitorTests {
   private func emptyFileCheckingVisitor(from source: String) -> Bool {

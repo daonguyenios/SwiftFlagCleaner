@@ -1,7 +1,7 @@
 import Foundation
 
 /// A class that cleans Objective-C flags from source files
-public class ObjcFlagCleaner {
+public class ObjcCleaner {
 
     /// A FileManager for working on I/O
     private let fileManager: any FileManagerProtocol
@@ -33,7 +33,7 @@ public class ObjcFlagCleaner {
     @discardableResult
     public func processFile(at filePath: String, flag: String) throws -> Bool {
         guard fileManager.fileExists(atPath: filePath) else {
-            throw NSError(domain: "ObjcFlagCleaner", code: 1,
+            throw NSError(domain: "ObjcCleaner", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "File not found: \(filePath)"])
         }
         
@@ -129,7 +129,7 @@ public class ObjcFlagCleaner {
                     print("❌ Error processing \(description) directive: \(errorMessage)")
                 }
                 
-                throw NSError(domain: "ObjcFlagCleaner", code: Int(status),
+                throw NSError(domain: "ObjcCleaner", code: Int(status),
                               userInfo: [NSLocalizedDescriptionKey: "Failed to process \(description) directive: \(errorMessage)"])
             }
         } catch {
