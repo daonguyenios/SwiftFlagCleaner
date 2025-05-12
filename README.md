@@ -34,7 +34,7 @@ cp .build/release/flagcleaner /usr/local/bin/
 Run the SwiftFlagCleaner tool from the command line with the following syntax:
 
 ```bash
-SwiftFlagCleaner --path /path/to/source --flag "FLAG_TO_CLEAN"
+flagcleaner --path /path/to/source --flag "FLAG_TO_CLEAN"
 ```
 
 ### Options
