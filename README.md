@@ -1,4 +1,4 @@
-# FlagCleaner
+# SwiftFlagCleaner
 
 FlagCleaner is a robust command-line tool designed to parse and manipulate Swift and Objective-C code to remove feature flags and clean up related code. It leverages the powerful SwiftSyntax and SwiftParser libraries for Swift code analysis and manipulation, while also handling Objective-C files.
 
