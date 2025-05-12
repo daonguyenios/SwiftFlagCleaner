@@ -1,6 +1,6 @@
 # SwiftFlagCleaner
 
-FlagCleaner is a robust command-line tool designed to parse and manipulate Swift and Objective-C code to remove feature flags and clean up related code. It leverages the powerful SwiftSyntax and SwiftParser libraries for Swift code analysis and manipulation, while also handling Objective-C files.
+SwiftFlagCleaner is a robust command-line tool designed to parse and manipulate Swift and Objective-C code to remove feature flags and clean up related code. It leverages the powerful SwiftSyntax and SwiftParser libraries for Swift code analysis and manipulation, while also handling Objective-C files.
 
 ## Features
 
@@ -15,7 +15,7 @@ FlagCleaner is a robust command-line tool designed to parse and manipulate Swift
 
 ## Installation
 
-To install FlagCleaner, you need to have Swift installed on your machine. You can clone the repository and build the project using Swift Package Manager.
+To install SwiftFlagCleaner, you need to have Swift installed on your machine. You can clone the repository and build the project using Swift Package Manager.
 
 ```bash
 git clone https://github.com/daonguyenios/SwiftFlagCleaner.git
@@ -31,10 +31,10 @@ cp .build/release/flagcleaner /usr/local/bin/
 
 ## Usage
 
-Run the FlagCleaner tool from the command line with the following syntax:
+Run the SwiftFlagCleaner tool from the command line with the following syntax:
 
 ```bash
-FlagCleaner --path /path/to/source --flag "FLAG_TO_CLEAN"
+SwiftFlagCleaner --path /path/to/source --flag "FLAG_TO_CLEAN"
 ```
 
 ### Options
@@ -66,10 +66,6 @@ FlagCleaner first scans the specified directory for Swift and Objective-C files 
 2. For Objective-C files: Processing the file to remove flag-related preprocessor directives and code
 
 The tool provides detailed output about processed files, including which files were changed and which had matches but no changes were made.
-
-## Documentation
-
-For detailed information about the tool's architecture, class diagrams, and sequence diagrams, refer to the [FlagCleaner_Documentation.confluence](./FlagCleaner_Documentation.confluence) file.
 
 ## Contributing
 
