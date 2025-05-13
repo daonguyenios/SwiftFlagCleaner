@@ -14,7 +14,7 @@ jobs:
       - uses: giginet/github-action-artifactbundle@v2
         id: artifactbundle
         with:
-          artifact_name: myexecutable
+          artifact_name: flagcleaner
       - name: Upload Artifact Bundle to Release
         run: |
           BODY="${{ github.event.release.body }}"
