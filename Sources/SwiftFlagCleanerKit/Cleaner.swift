@@ -82,9 +82,9 @@ public struct Cleaner {
 
             // Print files grouped by extension
             for (ext, files) in groupedByExtension.sorted(by: { $0.key < $1.key }) {
-                print("\n\(ext) files (\(files.count)):")
-                for (index, file) in files.sorted().enumerated() {
-                    print(" - \(file)".lightRed)
+                print("\n\(ext) files (\(files.count)):".bold.underline)
+                for (_, file) in files.sorted().enumerated() {
+                    print(" - \(file)".lightYellow)
                 }
             }
         }
